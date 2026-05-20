@@ -21,9 +21,19 @@ func main() {
 		formatted := cleanInput(input)
 		if len(formatted) == 0 {
 			fmt.Println("no input received")
+			continue
+		}
+		command := formatted[0]
+		pokeCommands := getCommands()
+		cmd, ok := pokeCommands[command]
+		if !ok {
+			fmt.Println("Unkown command")
 		} else {
-			output := fmt.Sprintf("Your command was: %s", formatted[0])
-			fmt.Println(output)
+			err := cmd.callback()
+			if err != nil {
+				logError := fmt.Sprintf("'%s' error: %v", command, err)
+				log.Println(logError)
+			}
 		}
 	}
 }
