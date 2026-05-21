@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/g-lok/bootdev-pokedex/internal/pokecache"
 )
 
 type PokeNamedAPIResourceList struct {
@@ -99,36 +102,50 @@ func getValidURL(api string, url string) (string, error) {
 	return validURL, nil
 }
 
-func GETPokeNamedAPIResourceList(api string, url string) (*PokeNamedAPIResourceList, error) {
+func GETPokeNamedAPIResourceList(api string, url string, cache *pokecache.Cache) (*PokeNamedAPIResourceList, error) {
 	validURL, err := getValidURL(api, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate url: %w", err)
 	}
 
-	// Backoff/retry failed calls
-	var resp *http.Response
-	for _, backoff := range backoffSchedule {
-		resp, err = http.Get(validURL)
-		if err == nil {
-			break
+	cacheVal, ok := cache.Get(validURL)
+	var data []byte
+	if ok {
+		data = cacheVal
+	} else {
+		// Backoff/retry failed calls
+		var resp *http.Response
+		for _, backoff := range backoffSchedule {
+			resp, err = http.Get(validURL)
+			if err == nil {
+				break
+			}
+			time.Sleep(backoff)
 		}
-		time.Sleep(backoff)
+		if err != nil {
+			return nil, fmt.Errorf("http.Get(%s) failed: %w", validURL, err)
+		}
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			resp.Body.Close()
+			return nil, fmt.Errorf("bad status code: %d from url: %s", resp.StatusCode, validURL)
+		}
+		defer resp.Body.Close()
+
+		data, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("io.ReadAll() failed to read resp.Body: %w", err)
+		}
+		err = cache.Add(validURL, data)
+		if err != nil {
+			return nil, fmt.Errorf("error write to cache: %w", err)
+		}
 	}
-	if err != nil {
-		resp.Body.Close() // Explicitly close the body since we return before the defer line below
-		return nil, fmt.Errorf("http.Get(%s) failed: %w", validURL, err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		resp.Body.Close()
-		return nil, fmt.Errorf("bad status code: %d from url: %s", resp.StatusCode, validURL)
-	}
-	defer resp.Body.Close()
 
 	// Unmarshal data
 	var result PokeNamedAPIResourceList
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	err = json.Unmarshal(data, &result)
 	if err != nil {
-		return nil, fmt.Errorf("decoding pokeapi response: %w", err)
+		return nil, fmt.Errorf("error decoding pokeapi response: %w", err)
 	}
 
 	return &result, nil

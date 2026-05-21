@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/g-lok/bootdev-pokedex/internal/pokecache"
 )
 
 type cliCommand struct {
 	name        string
 	description string
 	config      config
-	callback    func(*config) error
+	callback    func(*config, *pokecache.Cache) error
 }
 
 type config struct {
@@ -17,24 +19,31 @@ type config struct {
 	Previous string
 }
 
+const (
+	cmdExit = "exit"
+	cmdHelp = "help"
+	cmdMap  = "map"
+	cmdMapb = "mapb"
+)
+
 func getCommands() map[string]cliCommand {
 	return map[string]cliCommand{
-		"exit": {
+		cmdExit: {
 			name:        "exit",
 			description: "Exit the Pokedex",
 			callback:    commandExit,
 		},
-		"help": {
+		cmdHelp: {
 			name:        "help",
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
-		"map": {
+		cmdMap: {
 			name:        "map",
 			description: "list next 20 location areas",
 			callback:    commandMap,
 		},
-		"mapb": {
+		cmdMapb: {
 			name:        "map",
 			description: "list previous 20 location areas",
 			callback:    commandMapb,
@@ -42,13 +51,13 @@ func getCommands() map[string]cliCommand {
 	}
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, cache *pokecache.Cache) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, cache *pokecache.Cache) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
@@ -60,14 +69,14 @@ func commandHelp(cfg *config) error {
 	return nil
 }
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, cache *pokecache.Cache) error {
 	url := cfg.Next
 	if cfg.Previous != "" && cfg.Next == "" {
 		fmt.Println("you're on the last page")
 		return nil
 	}
 
-	res, err := GETPokeNamedAPIResourceList("location-area", url)
+	res, err := GETPokeNamedAPIResourceList("location-area", url, cache)
 	if err != nil {
 		return fmt.Errorf("error getting location-area: %w", err)
 	}
@@ -79,13 +88,13 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapb(cfg *config) error {
+func commandMapb(cfg *config, cache *pokecache.Cache) error {
 	url := cfg.Previous
 	if cfg.Previous == "" {
 		fmt.Println("you're on the first page")
 		return nil
 	}
-	res, err := GETPokeNamedAPIResourceList("location-area", url)
+	res, err := GETPokeNamedAPIResourceList("location-area", url, cache)
 	if err != nil {
 		return fmt.Errorf("error getting location-area: %w", err)
 	}
