@@ -15,6 +15,7 @@ type Cache struct {
 	entries  map[string]cacheEntry
 	interval time.Duration
 	mu       sync.Mutex
+	StopChan chan struct{}
 }
 
 func NewCache(interval time.Duration) (*Cache, error) {
@@ -24,6 +25,7 @@ func NewCache(interval time.Duration) (*Cache, error) {
 	cache := &Cache{
 		entries:  make(map[string]cacheEntry),
 		interval: interval,
+		StopChan: make(chan struct{}),
 	}
 
 	// reapLoop()
@@ -54,8 +56,13 @@ func (c *Cache) reapLoop() {
 	ticker := time.NewTicker(c.interval)
 	defer ticker.Stop() // not necessary in go>=v1.23 but play it safe
 
-	for range ticker.C {
-		c.reap()
+	for {
+		select {
+		case <-ticker.C:
+			c.reap()
+		case <-c.StopChan:
+			return
+		}
 	}
 }
 

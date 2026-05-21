@@ -13,7 +13,9 @@ import (
 func main() {
 	prompt := "Pokedex > "
 	scanner := bufio.NewScanner(os.Stdin)
-	cfg := &config{}
+	cfg := &config{
+		Pokedex: make(map[string]*Pokemon),
+	}
 	cacheInterval := 5 * time.Second
 	cache, err := pokecache.NewCache(cacheInterval)
 	if err != nil {
@@ -32,6 +34,12 @@ func main() {
 			fmt.Println("no input received")
 			continue
 		}
+
+		var cmdArgs []string
+		if len(formatted) > 1 {
+			cmdArgs = formatted[1:]
+		}
+		cfg.Args = cmdArgs
 		command := formatted[0]
 		pokeCommands := getCommands()
 		cmd, ok := pokeCommands[command]
