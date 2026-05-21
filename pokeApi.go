@@ -438,7 +438,7 @@ var backoffSchedule = []time.Duration{
 	10 * time.Second,
 }
 
-// T is a generic placeholder for whatever struct type you want to unmarshal into
+// T is a generic placeholder for whatever struct type being Unmarshaled into
 func fetchAndCache[T any](cache *pokecache.Cache, url string) (*T, error) {
 	// 1. Check Cache
 	cacheVal, ok := cache.Get(url)
@@ -448,9 +448,6 @@ func fetchAndCache[T any](cache *pokecache.Cache, url string) (*T, error) {
 			return &result, nil
 		}
 	}
-
-	// 2. Run your awesome Backoff / http.Get(url) loop here...
-	// (Keep your exact retry and status code checks)
 
 	// Backoff/retry failed calls
 	var resp *http.Response
@@ -471,7 +468,6 @@ func fetchAndCache[T any](cache *pokecache.Cache, url string) (*T, error) {
 	}
 	defer resp.Body.Close()
 
-	// 3. Read and cache the bytes
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -481,7 +477,6 @@ func fetchAndCache[T any](cache *pokecache.Cache, url string) (*T, error) {
 		return nil, err
 	}
 
-	// 4. Unmarshal into the generic type
 	var result T
 	if err = json.Unmarshal(data, &result); err != nil {
 		return nil, err
@@ -523,14 +518,12 @@ func GETPokeNamedAPIResourceList(api string, url string, cache *pokecache.Cache)
 }
 
 func GETPokeLocationAreaDetails(locationArea string, cache *pokecache.Cache) (*PokeLocationArea, error) {
-	// e.g. https://pokeapi.co
 	url := PokeAPIs["location-area"] + locationArea + "/"
 
 	return fetchAndCache[PokeLocationArea](cache, url)
 }
 
 func GETPokemon(pokemon string, cache *pokecache.Cache) (*Pokemon, error) {
-	// e.g. https://pokeapi.co
 	url := PokeAPIs["pokemon"] + pokemon + "/"
 
 	return fetchAndCache[Pokemon](cache, url)
