@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -28,6 +29,7 @@ const (
 	cmdMapb    = "mapb"
 	cmdExplore = "explore"
 	cmdCatch   = "catch"
+	cmdInspect = "inspect"
 )
 
 func getCommands() map[string]cliCommand {
@@ -61,6 +63,11 @@ func getCommands() map[string]cliCommand {
 			name:        "catch",
 			description: "try to catch a pokemon",
 			callback:    commandCatch,
+		},
+		cmdInspect: {
+			name:        "inspect",
+			description: "inspect a caught pokemon",
+			callback:    commandInspect,
 		},
 	}
 }
@@ -144,7 +151,7 @@ func calculatePokemonDC(baseExp int) float64 {
 
 	// 1. Check for the "Crazy High" Outliers first (Critical Tier)
 	if baseExp > int(peak) {
-		// Forces the player to roll a 0.98 or higher (akin to a Nat 20!)
+		// Forces the player to roll a 0.98 or higher (akin to a D&D Nat 20)
 		return 0.98
 	}
 
@@ -191,5 +198,35 @@ func commandCatch(cfg *config, cache *pokecache.Cache) error {
 		msg := fmt.Sprintf("%s escaped!", pokemon)
 		fmt.Println(msg)
 	}
+	return nil
+}
+
+func commandInspect(cfg *config, cache *pokecache.Cache) error {
+	if len(cfg.Args) == 0 {
+		return errors.New("inspect command requires a pokemon name (e.g. 'inspect pikachu')")
+	}
+
+	name := cfg.Args[0]
+
+	pokemon, ok := cfg.Pokedex[name]
+	if !ok {
+		fmt.Println("you have not caught that pokemon yet")
+		return nil
+	}
+
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+
+	fmt.Println("Stats:")
+	for _, s := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", s.Stat.Name, s.BaseStat)
+	}
+
+	fmt.Println("Types:")
+	for _, t := range pokemon.Types {
+		fmt.Printf("  - %s\n", t.Type.Name)
+	}
+
 	return nil
 }
