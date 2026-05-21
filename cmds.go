@@ -30,6 +30,7 @@ const (
 	cmdExplore = "explore"
 	cmdCatch   = "catch"
 	cmdInspect = "inspect"
+	cmdPoxedex = "pokedex"
 )
 
 func getCommands() map[string]cliCommand {
@@ -68,6 +69,11 @@ func getCommands() map[string]cliCommand {
 			name:        "inspect",
 			description: "inspect a caught pokemon",
 			callback:    commandInspect,
+		},
+		cmdPoxedex: {
+			name:        "pokedex",
+			description: "list your caught Pokemon",
+			callback:    commandPokedex,
 		},
 	}
 }
@@ -193,6 +199,7 @@ func commandCatch(cfg *config, cache *pokecache.Cache) error {
 	if diceRoll >= normalizedPokeDC {
 		msg := fmt.Sprintf("%s was caught!", pokemon)
 		fmt.Println(msg)
+		fmt.Println("You may now inspect it with the inspect command.")
 		cfg.Pokedex[pokemon] = res
 	} else {
 		msg := fmt.Sprintf("%s escaped!", pokemon)
@@ -228,5 +235,18 @@ func commandInspect(cfg *config, cache *pokecache.Cache) error {
 		fmt.Printf("  - %s\n", t.Type.Name)
 	}
 
+	return nil
+}
+
+func commandPokedex(cfg *config, cache *pokecache.Cache) error {
+	if len(cfg.Pokedex) == 0 {
+		fmt.Println("Your PokeDex is empty.")
+		return nil
+	}
+
+	fmt.Println("Your Pokedex:")
+	for pokemon := range cfg.Pokedex {
+		fmt.Printf(" - %s\n", pokemon)
+	}
 	return nil
 }
